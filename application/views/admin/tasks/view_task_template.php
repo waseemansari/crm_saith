@@ -658,7 +658,7 @@ foreach ($task->timesheets as $timesheet) { ?>
         </div>
         <?php } ?>
         <hr />
-            <div class="tw-flex tw-justify-between tw-items-center">
+            <div class="tw-flex tw-justify-between tw-items-center" id="material">
                 <h4 class="chk-heading tw-my-0 tw-font-semibold tw-text-base">
                     <?php echo _l('add_edit_inventory'); ?> 
                 </h4>
@@ -698,17 +698,20 @@ foreach ($task->timesheets as $timesheet) { ?>
             </div>
             
             <div id="task_inventory_items" class="tw-mt-2">
-                <?php if (!empty($task_inventories)) { ?>
+                <?php if (!empty($task_inventories)) { 
+                     $total_material_cost=0;
+                    ?>
+                    
                     <?php foreach ($task_inventories as $inv) { ?>
-                        <div class="tw-flex tw-items-center tw-justify-between tw-border-b tw-py-2" id="inv_item_<?= $inv['id']; ?>">
+                        <div class="tw-flex tw-items-center tw-justify-between tw-border-b tw-py-2" id="inv_item_<?= $inv['id']; ?>" data-cost="<?= $inv['qty'] * $inv['rate']; ?>">
                             <div class="tw-flex tw-items-center">
                                 <strong><?= get_item_description($inv['inventory_item_id']); ?></strong>
                                 <span class="tw-text-sm tw-text-neutral-500 inv-qty-unit" id="inv_display_<?= $inv['id']; ?>">
                                    &nbsp; (<?= $inv['qty']; ?> <?= $inv['unit']; ?>)
                                 
                                    &nbsp; (<?= $inv['qty']; ?> * <?= $inv['rate']; ?> = <?= $inv['qty']*$inv['rate']; ?>)
+                                   <?php $total_material_cost = $total_material_cost+$inv['qty']*$inv['rate']?>
                                 </span>
-
                                 <!-- hidden edit form -->
                                 <span class="inv-edit-form tw-hidden" id="inv_edit_<?= $inv['id']; ?>">
                                     <input type="number" id="qty_<?= $inv['id']; ?>" value="<?= $inv['qty']; ?>" class="tw-border tw-w-16 tw-px-1 tw-ml-1 tw-text-sm">
@@ -732,11 +735,17 @@ foreach ($task->timesheets as $timesheet) { ?>
                             </div>
                         </div>
                     <?php } ?>
+                    
+                    
                 <?php } else { ?>
                     <p class="tw-text-sm tw-text-neutral-500"><?= _l('no_inventory_items_found'); ?></p>
                 <?php } ?>
+                
             </div>
-
+            <hr class="margin:0px"/> 
+            <p> <?php echo _l('total_material_cost'); ?> : 
+                <span id="total_material_cost"><?= $total_material_cost; ?></span>
+            </p>
 
         <hr />
         <a href="#" id="taskCommentSlide" onclick="slideToggle('.tasks-comments'); return false;">
@@ -1475,8 +1484,21 @@ function deleteInventoryItem(id) {
     .then(res => res.json())
     .then(data => {
         if (data.success) {
-            // remove item from DOM
-            document.getElementById('inv_item_' + id).remove();
+            const row = document.getElementById('inv_item_' + id);
+
+            if (row) {
+                // read item cost from attribute
+                const itemCost = parseFloat(row.getAttribute('data-cost')) || 0;
+
+                // remove row
+                row.remove();
+
+                // update total
+                const totalEl = document.getElementById('total_material_cost');
+                let currentTotal = parseFloat(totalEl.innerText) || 0;
+                let newTotal = currentTotal - itemCost;
+                totalEl.innerText = newTotal.toFixed(2);
+            }
         } else {
             alert("Failed to delete item");
         }
@@ -1486,20 +1508,7 @@ function deleteInventoryItem(id) {
         alert("Error deleting item");
     });
 }
-</script>
-<script>
-function editInventoryItem(id) {
-    // hide display, show input
-    document.getElementById("inv_display_" + id).classList.add("tw-hidden");
-    document.getElementById("inv_edit_" + id).classList.remove("tw-hidden");
-}
-
-function cancelEdit(id) {
-    // cancel edit → hide input, show display
-    document.getElementById("inv_edit_" + id).classList.add("tw-hidden");
-    document.getElementById("inv_display_" + id).classList.remove("tw-hidden");
-}
-
+///////////////save 
 function saveInventoryItem(id) {
     const qty = document.getElementById("qty_" + id).value;
     const unit = document.getElementById("unit_" + id).value;
@@ -1522,8 +1531,28 @@ function saveInventoryItem(id) {
         response = JSON.parse(response);
         $("body").find(".dt-loader").remove();      
         if (response.success === true) {
-            document.getElementById("inv_display_" + id).innerText = `(${qty} ${unit}) (${qty} * ${rate}= ${qty*parseInt(rate)})`;
-                cancelEdit(id);
+const row = document.getElementById("inv_item_" + id);
+            if (row) {
+                // get old cost
+                const oldCost = parseFloat(row.getAttribute("data-cost")) || 0;
+
+                // calculate new cost
+                const newCost = qty * parseFloat(rate);
+
+                // update row display
+                document.getElementById("inv_display_" + id).innerText = 
+                    `(${qty} ${unit}) (${qty} * ${rate} = ${newCost})`;
+
+                // update row attribute
+                row.setAttribute("data-cost", newCost);
+
+                // update total
+                const totalEl = document.getElementById("total_material_cost");
+                let currentTotal = parseFloat(totalEl.innerText) || 0;
+                let updatedTotal = currentTotal - oldCost + newCost;
+                totalEl.innerText = updatedTotal.toFixed(2);
+            }
+            cancelEdit(id);
         } else {
             alert("Error: " + response.message);
         }
@@ -1533,6 +1562,17 @@ function saveInventoryItem(id) {
         alert("Something went wrong!");
         }
     });
+}
+function editInventoryItem(id) {
+    // hide display, show input
+    document.getElementById("inv_display_" + id).classList.add("tw-hidden");
+    document.getElementById("inv_edit_" + id).classList.remove("tw-hidden");
+}
+
+function cancelEdit(id) {
+    // cancel edit → hide input, show display
+    document.getElementById("inv_edit_" + id).classList.add("tw-hidden");
+    document.getElementById("inv_display_" + id).classList.remove("tw-hidden");
 }
 </script>
 
@@ -1588,23 +1628,27 @@ function saveInventoryItem(id) {
             contentType: false,   // required for files
             success: function (response) {
             response = JSON.parse(response);
-            $("body").find(".dt-loader").remove();      
+            $("body").find(".dt-loader").remove();
+                  
             if (response.success ) {
 
                 $("#selected_items").empty();
                 $("#itemsForm")[0].reset();
-                  $("#inventory_list_box").hide();
+                $("#inventory_list_box").hide();
                 toggleInventoryList(<?= $task->id ?>);
+            
 ///////////////////////
              response.success.forEach(function(inv) {
+                let itemCost = inv.qty * inv.rate;
                 let newItem = `
-                    <div class="tw-flex tw-items-center tw-justify-between tw-border-b tw-py-2" id="inv_item_${inv.id}">
+                    <div class="tw-flex tw-items-center tw-justify-between tw-border-b tw-py-2" id="inv_item_${inv.id}" data-cost="${itemCost}">
                         <div class="tw-flex tw-items-center">
-                            <strong>${inv.item_name}</strong>
+                            <strong>${inv.item_name}</strong> 
                             <span class="tw-text-sm tw-text-neutral-500 inv-qty-unit" id="inv_display_${inv.id}">
-                                &nbsp; (${inv.qty} ${inv.unit})
+                                &nbsp;&nbsp; (${inv.qty} ${inv.unit})
                                  &nbsp; (${inv.qty} * ${inv.rate} = ${inv.qty*inv.rate})
                             </span>
+                        
 
                             <!-- hidden edit form -->
                             <span class="inv-edit-form tw-hidden" id="inv_edit_${inv.id}">
@@ -1629,8 +1673,32 @@ function saveInventoryItem(id) {
                 // Append if not already exists
                 if ($("#inv_item_" + inv.id).length === 0) {
                     $("#task_inventory_items").append(newItem);
+                    const totalEl = document.getElementById("total_material_cost");
+                    let currentTotal = parseFloat(totalEl.innerText) || 0;
+                    totalEl.innerText = (currentTotal + itemCost).toFixed(2);
                 }
             });
+            const row = document.getElementById("inv_item_" + id);
+            if (row) {
+                // get old cost
+                const oldCost = parseFloat(row.getAttribute("data-cost")) || 0;
+
+                // calculate new cost
+                const newCost = qty * parseFloat(rate);
+
+                // update row display
+                document.getElementById("inv_display_" + id).innerText = 
+                    `(${qty} ${unit}) (${qty} * ${rate} = ${newCost})`;
+
+                // update row attribute
+                row.setAttribute("data-cost", newCost);
+
+                // update total
+                const totalEl = document.getElementById("total_material_cost");
+                let currentTotal = parseFloat(totalEl.innerText) || 0;
+                let updatedTotal = currentTotal - oldCost + newCost;
+                totalEl.innerText = updatedTotal.toFixed(2);
+            }
 ////////////////////////
             } else {
                 alert("Error: " + response.message);

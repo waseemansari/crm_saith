@@ -69,20 +69,21 @@ foreach ($comments as $comment) {
                 foreach($files as $file){
                  ?>
                        <div class="comment-files">
-                        <a href="<?= base_url('uploads/proposal_comments/' . $file['file']); ?>" target="_blank">
-                            <i class="fa fa-paperclip"></i> <?= $file['file'] ?>
-                        </a>
+                        <div class="file-row">
+                            <a href="<?= base_url('uploads/proposal_comments/' . $file['file']); ?>" target="_blank">
+                                <i class="fa fa-paperclip"></i> <?= $file['file'] ?>
+                            </a>
 
-                        <?php 
-                        // Only show checkbox if no final file exists for this proposal
-                        if (!isset($final_proposals[$file['proposal_id']])) { ?>
-                               <input type="checkbox" 
-                                    class="final-file-checkbox" 
-                                    data-file-id="<?= $file['id']; ?>" 
-                                    <?= $file['is_final'] == 1 ? 'checked' : '' ?>>
-                             Final File
-                        <?php } ?>
-                        <br/>
+                                <div class="final-file-option">
+                                    <input type="checkbox" 
+                                        class="final-file-checkbox" 
+                                        data-file-id="<?= $file['id']; ?>" 
+                                        data-proposal-id="<?= $file['proposal_id']; ?>"
+                                        <?= $file['is_final'] == 1 ? 'checked' : '' ?>>
+                                    <?= $file['is_final']==1 ? 'Final art work' : 'Mark as final art work'; ?>
+                                </div>
+                           
+                        </div>
                     </div>
               <?php 
                 }
@@ -118,12 +119,15 @@ foreach ($comments as $comment) {
 <script>
 $(document).ready(function() {
     $('.final-file-checkbox').on('change', function() {
-        var fileId = $(this).data('file-id');
-        var isFinal = $(this).is(':checked') ? 1 : 0;
+        var $checkbox = $(this); // keep reference
+        var fileId = $checkbox.data('file-id');
+        var proposalId = $checkbox.data('proposal-id');
+        var isFinal = $checkbox.is(':checked') ? 1 : 0;
+       
           $("body").append('<div class="dt-loader"></div>');
         var csrfName = $('input[name^="csrf"]').attr("name");
         var csrfHash = $('input[name^="csrf"]').val();
-
+        
         var formData = new FormData();
         formData.append("file_id", fileId);
         formData.append("is_final", isFinal);
@@ -136,18 +140,37 @@ $(document).ready(function() {
             contentType: false,   // required for files
             dataType: "json",
             success: function(response) {
+                $('body').find('.dt-loader').remove();
                 
+              
                 if(response?.success) {
-                    
-                    // location.reload(); // optional: reload to hide other checkboxes if needed
+                    if (isFinal === 1) {
+                        $('.final-file-checkbox[data-proposal-id="' + proposalId + '"]').not(this).prop('checked', false);
+                    }
+                     $checkbox.prop('checked', isFinal === 1);
                 } else {
                     alert('Failed to update status.');
+                    $checkbox.prop('checked', !isFinal);
                 }
             },
             error: function() {
+                $('body').find('.dt-loader').remove();
                 alert('Error updating statusxx.');
             }
         });
     });
 });
 </script>
+<style>
+    .file-row {
+    display: flex;
+    justify-content: space-between; /* link on left, checkbox+text on right */
+    align-items: center;
+}
+
+.final-file-option {
+    display: flex;
+    align-items: center;
+    gap: 6px; /* spacing between checkbox and text */
+}
+    </style>

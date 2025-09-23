@@ -24,6 +24,9 @@ class Proposals extends AdminController
         header('Content-Type: application/json'); // important
 
         if($file_id !== null) {
+            
+            $this->db->update('tblproposal_comments_file', ['is_final' =>0]);
+            
             $this->db->where('id', $file_id);
             $this->db->update('tblproposal_comments_file', ['is_final' => $is_final]);
 

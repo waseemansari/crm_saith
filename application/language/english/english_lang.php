@@ -712,6 +712,7 @@ $lang['task_single_add_new_comment']        = 'Add Comment';
 $lang['task_add_edit_subject']              = 'Subject';
 $lang['task_add_edit_priority']             = 'Priority';
 $lang['add_edit_inventory']                 = 'Material';
+$lang['total_material_cost']                 = 'Total material cost';
 $lang['no_inventory_items_found']           = 'Material No Found';
 $lang['task_priority_low']                  = 'Low';
 $lang['task_priority_medium']               = 'Medium';
