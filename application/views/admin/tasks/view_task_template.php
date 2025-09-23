@@ -1,6 +1,6 @@
 <?php defined('BASEPATH') or exit('No direct script access allowed'); ?>
 <?php
-	$task_inventories =  $this->db->query('select * from tbltask_inventories WHERE task_id='.$task->id)->result_array();
+	$task_inventories =  $this->db->query('select * from '.db_prefix() .'task_inventories WHERE task_id='.$task->id)->result_array();
 
 ?>
 <div class="modal-header task-single-header"
@@ -675,14 +675,14 @@ foreach ($task->timesheets as $timesheet) { ?>
                 
             </div>
               <div class="form-group inventory_list_div hidden">
-                <?php  $items =  $this->db->query('select id,description,unit from tblitems')->result_array(); ?>
+                <?php  $items =  $this->db->query('select id,description,unit,rate from tblitems')->result_array(); ?>
                
                     <select name="inventory_list" class="selectpicker" id="inventory_list" data-width="100%"
                         data-none-selected-text="<?php echo _l('dropdown_non_selected_tex'); ?>">
                         <option value="">-- Select Item --</option>
 
                         <?php foreach ($items as $item) { ?>
-                        <option value="<?php echo e($item['id']); ?>" data-unit="<?php echo $item['unit']; ?>">
+                        <option value="<?php echo e($item['id']); ?>" data-rate="<?php echo $item['rate']; ?>" data-unit="<?php echo $item['unit']; ?>">
                             <?php echo e($item['description']); ?></option>
                         <?php } ?>
                     </select>
@@ -705,12 +705,15 @@ foreach ($task->timesheets as $timesheet) { ?>
                                 <strong><?= get_item_description($inv['inventory_item_id']); ?></strong>
                                 <span class="tw-text-sm tw-text-neutral-500 inv-qty-unit" id="inv_display_<?= $inv['id']; ?>">
                                    &nbsp; (<?= $inv['qty']; ?> <?= $inv['unit']; ?>)
+                                
+                                   &nbsp; (<?= $inv['qty']; ?> * <?= $inv['rate']; ?> = <?= $inv['qty']*$inv['rate']; ?>)
                                 </span>
 
                                 <!-- hidden edit form -->
                                 <span class="inv-edit-form tw-hidden" id="inv_edit_<?= $inv['id']; ?>">
                                     <input type="number" id="qty_<?= $inv['id']; ?>" value="<?= $inv['qty']; ?>" class="tw-border tw-w-16 tw-px-1 tw-ml-1 tw-text-sm">
                                     <input type="hidden" id="unit_<?= $inv['id']; ?>" value="<?= $inv['unit']; ?>" class="tw-border tw-w-16 tw-px-1 tw-ml-1 tw-text-sm">
+                                    <input type="hidden" id="rate_<?= $inv['id']; ?>" value="<?= $inv['rate']; ?>" class="tw-border tw-w-16 tw-px-1 tw-ml-1 tw-text-sm">
                                     <button class="tw-text-green-600 tw-ml-1" onclick="saveInventoryItem(<?= $inv['id']; ?>)">✔</button>
                                     <button class="tw-text-red-600 tw-ml-1" onclick="cancelEdit(<?= $inv['id']; ?>)">✕</button>
                                 </span>
@@ -1500,7 +1503,7 @@ function cancelEdit(id) {
 function saveInventoryItem(id) {
     const qty = document.getElementById("qty_" + id).value;
     const unit = document.getElementById("unit_" + id).value;
-
+    const rate = document.getElementById("rate_" + id).value;
     var csrfName = $('input[name^="csrf"]').attr("name"); 
     var csrfHash = $('input[name^="csrf"]').val();
 
@@ -1519,7 +1522,7 @@ function saveInventoryItem(id) {
         response = JSON.parse(response);
         $("body").find(".dt-loader").remove();      
         if (response.success === true) {
-            document.getElementById("inv_display_" + id).innerText = `(${qty} ${unit})`;
+            document.getElementById("inv_display_" + id).innerText = `(${qty} ${unit}) (${qty} * ${rate}= ${qty*parseInt(rate)})`;
                 cancelEdit(id);
         } else {
             alert("Error: " + response.message);
@@ -1532,57 +1535,7 @@ function saveInventoryItem(id) {
     });
 }
 </script>
-<script>
-$(document).ready(function(){
-    $("#inventory_list").on("change", function(){
-        var itemId = $(this).val();
-        var itemText = $("#inventory_list option:selected").text();
-        var itemUnit = $("#inventory_list option:selected").data("unit");
 
-        if(itemId){
-            // Prevent duplicates
-            if($("#item_box_" + itemId).length == 0){
-                var box = `
-                 
-                        <div class="item-box row align-items-end" id="item_box_${itemId}" style="margin-top:10px">
-                            <div class="col-md-3 d-flex align-items-end "style="margin-top:14px"><strong>${itemText}</strong></div>
-                            <div class="col-md-2"></div> 
-                            <div class="col-md-4 text-right">
-                               <input type="number" name="items[${itemId}][qty]" 
-                                placeholder="Enter ${itemUnit}" 
-                                class="form-control" 
-                                 required>
-                            </div>
-                            
-                            <div class="col-md-3 text-right">
-                                <span><b>${itemUnit}</b></span>
-                                <button type="button" class="btn btn-sm remove-box" data-id="${itemId}" class="tw-text-neutral-500 tw-ml-2"> <i class="fa-regular fa-trash-can"></i></button>
-
-                            </div>
-                            <!-- Hidden fields for backend -->
-                            <input type="hidden" name="items[${itemId}][unit]" value="${itemUnit}">
-                            <input type="hidden" name="items[${itemId}][id]" value="${itemId}">
-                            <input type="hidden" name="items[${itemId}][task_id]" value="<?php echo $task->id; ?>">
-                        </div>
-                    
-                `;
-                $("#selected_items").append(box);
-                toggleSaveButton();
-            }
-
-            // Reset dropdown after selection
-            $(this).val("");
-            $('.selectpicker').selectpicker('refresh'); // refresh bootstrap-select
-        }
-    });
-
-    // Remove box
-    $(document).on("click", ".remove-box", function(){
-        var id = $(this).data("id");
-        $("#item_box_" + id).remove();
-    });
-});
-</script>
 <script>
   function toggleInventoryList() {
     const div = document.querySelector(".inventory_list_div");
@@ -1613,12 +1566,14 @@ $(document).ready(function(){
             const itemId = $(this).find('input[name*="[id]"]').val();
             const qty = $(this).find('input[name*="[qty]"]').val();
             const unit = $(this).find('input[name*="[unit]"]').val();
+            const rate = $(this).find('input[name*="[rate]"]').val();
             const task_id = $(this).find('input[name*="[task_id]"]').val();
             formData.append(`items[${itemId}][id]`, itemId);
             formData.append(`items[${itemId}][qty]`, qty);
             formData.append(`items[${itemId}][unit]`, unit);
             formData.append(`items[${itemId}][task_id]`, task_id);
-           
+            formData.append(`items[${itemId}][rate]`, rate);
+         
         });
         // add CSRF token
         var csrfName = $('input[name^="csrf"]').attr("name"); 
@@ -1635,7 +1590,6 @@ $(document).ready(function(){
             response = JSON.parse(response);
             $("body").find(".dt-loader").remove();      
             if (response.success ) {
-console.log('response',response);
 
                 $("#selected_items").empty();
                 $("#itemsForm")[0].reset();
@@ -1649,6 +1603,7 @@ console.log('response',response);
                             <strong>${inv.item_name}</strong>
                             <span class="tw-text-sm tw-text-neutral-500 inv-qty-unit" id="inv_display_${inv.id}">
                                 &nbsp; (${inv.qty} ${inv.unit})
+                                 &nbsp; (${inv.qty} * ${inv.rate} = ${inv.qty*inv.rate})
                             </span>
 
                             <!-- hidden edit form -->
@@ -1689,4 +1644,72 @@ console.log('response',response);
     });
 });
 
+</script>
+<script>
+$(document).ready(function(){
+    $("#inventory_list").on("change", function(){
+        var itemId = $(this).val();
+        var itemText = $("#inventory_list option:selected").text();
+        var itemUnit = $("#inventory_list option:selected").data("unit");
+        var itemRate = $("#inventory_list option:selected").data("rate");
+
+        if(itemId){
+            // Prevent duplicates
+            if($("#item_box_" + itemId).length == 0){
+                var box = `
+                 
+                        <div class="item-box row align-items-end" id="item_box_${itemId}" style="margin-top:10px">
+                            <div class="col-md-3 d-flex align-items-end "style="margin-top:14px"><strong>${itemText}</strong></div>
+                            
+                            <div class="col-md-4 text-right">
+                               <input type="number" name="items[${itemId}][qty]" 
+                                placeholder="Enter ${itemUnit}" 
+                                
+                                value="1"
+                                class="form-control item-qty"
+                                 required>
+                                 
+                            </div>
+                             <div class="col-md-2 d-flex align-items-end "style="margin-top:14px"><span>
+                               <span>Rate: <b class="item-rate">${parseFloat(itemRate).toFixed(2)}</b></span>
+                             </div>
+                            <div class="col-md-3 text-right d-flex align-items-end "style="margin-top:14px">
+                                 
+                              
+                                 <span>Total: <b class="item-total">${parseFloat(itemRate).toFixed(2)}</b></span>
+
+                                <button type="button" class="btn btn-sm remove-box" data-id="${itemId}" class="tw-text-neutral-500 tw-ml-2"> <i class="fa-regular fa-trash-can"></i></button>
+
+                            </div>
+                            <!-- Hidden fields for backend -->
+                            <input type="hidden" name="items[${itemId}][rate]" class="item-hidden-rate" value="${parseFloat(itemRate)}">
+                            <input type="hidden" name="items[${itemId}][unit]" value="${itemUnit}">
+                            <input type="hidden" name="items[${itemId}][id]" value="${itemId}">
+                            <input type="hidden" name="items[${itemId}][task_id]" value="<?php echo $task->id; ?>">
+                        </div>
+                    
+                `;
+                $("#selected_items").append(box);
+                toggleSaveButton();
+            }
+            // Live calculation
+            $(document).on("input", ".item-qty", function(){
+                var qty = parseFloat($(this).val()) || 0;
+                var rate = parseFloat($(this).closest(".item-box").find(".item-hidden-rate").val()) || 0;
+                var total = qty * rate;
+                
+                $(this).closest(".item-box").find(".item-total").text(total.toFixed(2));
+            });
+            // Reset dropdown after selection
+            $(this).val("");
+            $('.selectpicker').selectpicker('refresh'); // refresh bootstrap-select
+        }
+    });
+
+    // Remove box
+    $(document).on("click", ".remove-box", function(){
+        var id = $(this).data("id");
+        $("#item_box_" + id).remove();
+    });
+});
 </script>

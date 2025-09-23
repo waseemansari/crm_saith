@@ -291,7 +291,19 @@ $proposal->content = str_replace('{proposal_items}', $items, $proposal->content)
                         <?php
                      $proposal_comments = '';
                        $comments = array_reverse($comments);
+                       $final_proposals = [];
+                    foreach ($comments as $comment) {
+                        $files = $this->db->get_where('tblproposal_comments_file', ['comments_id' => $comment['id']])->result_array();
+                        foreach ($files as $f) {
+                            if ($f['is_final'] == 1) {
+                                $final_proposals[$f['proposal_id']] = true;
+                            }
+                        }
+                    }
                        foreach ($comments as $comment) {
+                         $sql = "SELECT * FROM tblproposal_comments_file WHERE comments_id = ? ";
+                      $files =  $this->db->query($sql, [$comment['id']])->result_array();
+        
     echo '<div class="proposal_comment mtop10 mbot20" data-commentid="' . $comment['id'] . '">';
 
     if ($comment['staffid'] != 0) {
@@ -313,17 +325,24 @@ $proposal->content = str_replace('{proposal_items}', $items, $proposal->content)
     echo '</div>';
 
     // ✅ attachments per comment
-    if (!empty($comment['file'])) {
-        $files = json_decode($comment['file'], true);
-        if (is_array($files) && count($files) > 0) {
+    if (!empty($files)) {
+       
+        
             echo '<div class="comment-files">';
-            foreach ($files as $f) {
-                echo '<a href="' . base_url('uploads/proposal_comments/' . $f) . '" target="_blank">
-                        <i class="fa fa-paperclip"></i> ' . e($f) . '
+             foreach($files as $file){
+                echo '<a href="' . base_url('uploads/proposal_comments/' . $file['file']) . '" target="_blank">
+                        <i class="fa fa-paperclip"></i> ' . e($file['file']) . '
                       </a><br>';
+                        if (!isset($final_proposals[$file['proposal_id']])) {
+                    // echo ' <input type="checkbox" 
+                    //             class="final-file-checkbox" 
+                    //             data-file-id="' . $file['id'] . '" 
+                    //             ' . ($file['is_final'] == 1 ? 'checked' : '') . '> Final File <br>';
+                }
+                      
             }
             echo '</div>';
-        }
+        
     }
 
     echo '</div></div>'; // close media-body and wrapper
@@ -385,3 +404,41 @@ $proposal->content = str_replace('{proposal_items}', $items, $proposal->content)
     });
 </script>
 </div>
+
+<script>
+$(document).ready(function() {
+    $('.final-file-checkbox').on('change', function() {
+        var fileId = $(this).data('file-id');
+        var isFinal = $(this).is(':checked') ? 1 : 0;
+          $("body").append('<div class="dt-loader"></div>');
+        var csrfName = $('input[name^="csrf"]').attr("name");
+        var csrfHash = $('input[name^="csrf"]').val();
+
+        var formData = new FormData();
+        formData.append("file_id", fileId);
+        formData.append("is_final", isFinal);
+        formData.append(csrfName, csrfHash);
+        $.ajax({
+            url: admin_url + "proposals/set_final_file",
+            type: "POST",
+            data: formData,
+            processData: false,   // required for files
+            contentType: false,   // required for files
+            dataType: "json",
+            success: function(response) {
+                console.log('response',response.success);
+                
+                if(response?.success) {
+                    
+                    location.reload(); // optional: reload to hide other checkboxes if needed
+                } else {
+                    alert('Failed to update status.');
+                }
+            },
+            error: function() {
+                alert('Error updating statusxx.');
+            }
+        });
+    });
+});
+</script>

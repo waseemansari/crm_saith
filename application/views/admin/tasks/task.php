@@ -189,18 +189,21 @@
                             </div>
                              <div class="col-md-12">
                                 <?php
-                                	$items =  $this->db->query('select id,description,unit from tblitems')->result_array();
+                                	$items =  $this->db->query('select id,description,unit,rate from tblitems')->result_array();
                                      
                                 ?>
                                 <div class="form-group">
+                                    
                                     <label for="priority"
                                         class="control-label"><?php echo _l('add_edit_inventory'); ?></label>
                                         <select name="inventory_list" class="selectpicker" id="inventory_list" data-width="100%"
                                             data-none-selected-text="<?php echo _l('dropdown_non_selected_tex'); ?>">
                                             <option value="">-- Select Item --</option>
 
-                                            <?php foreach ($items as $item) { ?>
-                                            <option value="<?php echo e($item['id']); ?>" data-unit="<?php echo $item['unit']; ?>">
+                                            <?php foreach ($items as $item) {
+                                                
+                                                ?>
+                                            <option value="<?php echo e($item['id']); ?>" data-rate="<?php echo $item['rate']; ?>" data-unit="<?php echo $item['unit']; ?>">
                                                 <?php echo e($item['description']); ?></option>
                                             <?php } ?>
                                         </select>
@@ -682,37 +685,51 @@ $(document).ready(function(){
         var itemId = $(this).val();
         var itemText = $("#inventory_list option:selected").text();
         var itemUnit = $("#inventory_list option:selected").data("unit");
+        var itemRate = $("#inventory_list option:selected").data("rate");
 
         if(itemId){
-            // Prevent duplicates
-            if($("#item_box_" + itemId).length == 0){
-                var box = `
-                    <div class="item-box " id="item_box_${itemId}" style="margin-bottom:12px">
-                        <strong>${itemText}</strong>
-                        
-                        
-                        <!-- Quantity input -->
-                        <input type="number" name="items[${itemId}][qty]" 
-                               placeholder="Enter ${itemUnit}" 
-                               class="filter-option-inner-inner" 
-                               style="width:120px;display:inline-block;" required>
-                        <span><b>${itemUnit}</b></span>
-                        <!-- Hidden fields for backend -->
-                        <input type="hidden" name="items[${itemId}][unit]" value="${itemUnit}">
-                        <input type="hidden" name="items[${itemId}][id]" value="${itemId}">
-                        
-                        <button type="button" class="btn btn-danger btn-sm remove-box" data-id="${itemId}" style="cursor:pointer; margin-left:10px;">&times;</button>
-                    </div>
-                `;
-                $("#selected_items").append(box);
+            if(itemId){
+                if($("#item_box_" + itemId).length == 0){
+                    var box = `
+                        <div class="item-box" id="item_box_${itemId}" style="margin-bottom:12px">
+                            <strong>${itemText}</strong>
+                            
+                            <!-- Quantity input -->
+                            <input type="number" 
+                                name="items[${itemId}][qty]" 
+                                value="1"
+                                class="item-qty" 
+                                style="width:120px;display:inline-block;" required>
+                            <span><b>${itemUnit}</b></span>
+                            <span>Rate: <b class="item-rate">${parseFloat(itemRate).toFixed(2)}</b></span>
+                            
+                            <!-- Total -->
+                            <span>Total: <b class="item-total">${parseFloat(itemRate).toFixed(2)}</b></span>
+                            
+                            <!-- Hidden fields -->
+                            <input type="hidden" class="item-hidden-rate" value="${parseFloat(itemRate)}">
+                            <input type="hidden" name="items[${itemId}][unit]" value="${itemUnit}">
+                            <input type="hidden" name="items[${itemId}][id]" value="${itemId}">
+                            <input type="hidden" name="items[${itemId}][rate]" value="${parseFloat(itemRate)}">
+                            
+                            <button type="button" class="btn btn-danger btn-sm remove-box" data-id="${itemId}" style="cursor:pointer; margin-left:10px;">&times;</button>
+                        </div>
+                    `;
+                    $("#selected_items").append(box);
+                }
             }
 
-            // Reset dropdown after selection
-            $(this).val("");
-            $('.selectpicker').selectpicker('refresh'); // refresh bootstrap-select
+            // Live calculation
+            $(document).on("input", ".item-qty", function(){
+                var qty = parseFloat($(this).val()) || 0;
+                var rate = parseFloat($(this).closest(".item-box").find(".item-hidden-rate").val()) || 0;
+                var total = qty * rate;
+                $(this).closest(".item-box").find(".item-total").text(total.toFixed(2));
+            });
+
         }
     });
-
+   
     // Remove box
     $(document).on("click", ".remove-box", function(){
         var id = $(this).data("id");

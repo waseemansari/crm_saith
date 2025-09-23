@@ -1,8 +1,25 @@
 <?php defined('BASEPATH') or exit('No direct script access allowed');
 ob_start();
+
+
+// Step 1: Collect all proposal IDs that already have a final file
+$final_proposals = [];
+foreach ($comments as $comment) {
+    $files = $this->db->get_where('tblproposal_comments_file', ['comments_id' => $comment['id']])->result_array();
+    foreach ($files as $f) {
+        if ($f['is_final'] == 1) {
+            $final_proposals[$f['proposal_id']] = true;
+        }
+    }
+}
+
 $len = count($comments);
 $i   = 0;
-foreach ($comments as $comment) { ?>
+foreach ($comments as $comment) { 
+        $sql = "SELECT * FROM tblproposal_comments_file WHERE comments_id = ? ";
+        $files =  $this->db->query($sql, [$comment['id']])->result_array();
+        
+    ?>
 <div class="col-md-12 comment-item"
     data-commentid="<?= e($comment['id']); ?>">
     <?php if ($comment['staffid'] != 0) { ?>
@@ -48,23 +65,28 @@ foreach ($comments as $comment) { ?>
             class="tw-mt-3">
             <div data-proposal-comment="<?= e($comment['id']); ?>" class="tw-mt-3">
             <?php 
-            if (!empty($comment['file'])) { 
-                // Decode JSON
-                $files = json_decode($comment['file'], true); 
-                if (is_array($files) && count($files) > 0) { ?>
-                    <div class="comment-files">
-                        <?php foreach ($files as $f) { ?>
-                            
-                            <a href="<?= base_url('uploads/proposal_comments/' . $f); ?>" 
-                            target="_blank" 
-                            >
-                                <i class="fa fa-paperclip"></i> <?= $f ?>
-                            </a><br/>
+            if (!empty($files)) { 
+                foreach($files as $file){
+                 ?>
+                       <div class="comment-files">
+                        <a href="<?= base_url('uploads/proposal_comments/' . $file['file']); ?>" target="_blank">
+                            <i class="fa fa-paperclip"></i> <?= $file['file'] ?>
+                        </a>
+
+                        <?php 
+                        // Only show checkbox if no final file exists for this proposal
+                        if (!isset($final_proposals[$file['proposal_id']])) { ?>
+                               <input type="checkbox" 
+                                    class="final-file-checkbox" 
+                                    data-file-id="<?= $file['id']; ?>" 
+                                    <?= $file['is_final'] == 1 ? 'checked' : '' ?>>
+                             Final File
                         <?php } ?>
+                        <br/>
                     </div>
-            <?php 
-                } 
-            } 
+              <?php 
+                }
+             } 
             ?>
         </div>
 
@@ -93,3 +115,39 @@ foreach ($comments as $comment) { ?>
 </div>
 <?php $i++;
 } ?>
+<script>
+$(document).ready(function() {
+    $('.final-file-checkbox').on('change', function() {
+        var fileId = $(this).data('file-id');
+        var isFinal = $(this).is(':checked') ? 1 : 0;
+          $("body").append('<div class="dt-loader"></div>');
+        var csrfName = $('input[name^="csrf"]').attr("name");
+        var csrfHash = $('input[name^="csrf"]').val();
+
+        var formData = new FormData();
+        formData.append("file_id", fileId);
+        formData.append("is_final", isFinal);
+        formData.append(csrfName, csrfHash);
+        $.ajax({
+            url: admin_url + "proposals/set_final_file",
+            type: "POST",
+            data: formData,
+            processData: false,   // required for files
+            contentType: false,   // required for files
+            dataType: "json",
+            success: function(response) {
+                
+                if(response?.success) {
+                    
+                    // location.reload(); // optional: reload to hide other checkboxes if needed
+                } else {
+                    alert('Failed to update status.');
+                }
+            },
+            error: function() {
+                alert('Error updating statusxx.');
+            }
+        });
+    });
+});
+</script>

@@ -17,6 +17,22 @@ class Proposals extends AdminController
     {
         $this->list_proposals($proposal_id);
     }
+    public function set_final_file()
+    {
+        $file_id = $this->input->post('file_id');
+        $is_final = $this->input->post('is_final');
+        header('Content-Type: application/json'); // important
+
+        if($file_id !== null) {
+            $this->db->where('id', $file_id);
+            $this->db->update('tblproposal_comments_file', ['is_final' => $is_final]);
+
+            echo json_encode(['success' => true]);
+        } else {
+            echo json_encode(['success' => false]);
+        }
+    }
+
 
     public function list_proposals($proposal_id = '')
     {

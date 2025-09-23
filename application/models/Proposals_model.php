@@ -500,7 +500,14 @@ class Proposals_model extends App_Model
  
                 if (move_uploaded_file($tmpName, $filePath)) {
                  $uploadedFiles[] = $uniqueName; // add to array
-
+                    $this->db->insert(db_prefix() . 'proposal_comments_file', [
+                            'file'       => $uniqueName,
+                            'comments_id' => $insert_id,
+                            'is_final' => 0,
+                            'proposal_id'=>$data['proposalid'],
+                            'created_at' => date('Y-m-d H:i:s'),
+                            'updated_at' => date('Y-m-d H:i:s')
+                        ]);
                 } else {
                     echo json_encode([
                         'success' => false,
@@ -510,10 +517,7 @@ class Proposals_model extends App_Model
                 }
             }
 
-            $this->db->insert(db_prefix() . 'proposal_comments_file', [
-                'file'       => json_encode($uploadedFiles),
-                'comments_id' => $insert_id,
-            ]);
+           
         }
        
             
@@ -588,21 +592,66 @@ class Proposals_model extends App_Model
      */
     public function get_comments($id)
     {
-        // $this->db->where('proposalid', $id);
-        // $this->db->order_by('dateadded', 'ASC');
-        // return $this->db->get(db_prefix() . 'proposal_comments')->result_array();
+        $this->load->dbforge();
+        $table = 'proposal_comments_file';
+        if (!$this->db->table_exists($table)) {
+           
+            $fields = array(
+                'id' => array(
+                    'type' => 'INT',
+                    'constraint' => 11,
+                    'unsigned' => TRUE,
+                    'auto_increment' => TRUE
+                ),
+                'file' => array(
+                    'type' => 'VARCHAR',
+                    'constraint' => '100',
+                ),
+                'comments_id' => array(
+                    'type' => 'INT',
+                    'constraint' => '100',
+                ),
+                'is_final' => array(
+                    'type' => 'INT',
+                    'constraint' => '10',
+                    'default' => 0
+                ),
+                'proposal_id' => array(
+                    'type' => 'INT',
+                    'constraint' => '10',
+                    'default' => 0
+                ),
+                
+                'created_at' => array(
+                    'type' => 'DATETIME',
+                    'null' => TRUE,
+                ),
+                'updated_at' => array(
+                    'type' => 'DATETIME',
+                    'null' => TRUE,
+                )
+            );
+            $this->dbforge->add_field($fields);
+            $this->dbforge->add_key('id', TRUE); // primary key
+            $this->dbforge->create_table($table);
+            echo "Table created!";
+        }
+        $this->db->where('proposalid', $id);
+        $this->db->order_by('dateadded', 'ASC');
+        return $this->db->get(db_prefix() . 'proposal_comments')->result_array();
 
-        return $this->get_comments_with_file($id);
+        // return $this->get_comments_with_file($id);
     }
-   public function get_comments_with_file($proposal_id)
-        {
+    public function get_comments_with_file($proposal_id)
+    {
+        
             $sql = "SELECT *
                     FROM tblproposal_comments 
                     LEFT JOIN tblproposal_comments_file 
                         ON tblproposal_comments_file.comments_id = tblproposal_comments.id
                     WHERE tblproposal_comments.proposalid = ? ORDER BY dateadded ASC";
             return $this->db->query($sql, [$proposal_id])->result_array();
-        }
+    }
 
     /**
      * Get proposal single comment

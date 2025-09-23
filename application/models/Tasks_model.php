@@ -33,6 +33,58 @@ class Tasks_model extends App_Model
 
         return $this->db->get(db_prefix() . 'tasks')->result_array();
     }
+    public function create_table_task_inventory()
+    {
+        $this->load->dbforge();
+        $table = 'task_inventories';
+        if (!$this->db->table_exists($table)) {
+           
+            $fields = array(
+                'id' => array(
+                    'type' => 'INT',
+                    'constraint' => 11,
+                    'unsigned' => TRUE,
+                    'auto_increment' => TRUE
+                ),
+                
+                'task_id' => array(
+                    'type' => 'INT',
+                    'constraint' => '100',
+                ),
+                'inventory_item_id' => array(
+                    'type' => 'INT',
+                    'constraint' => '100',
+                ),
+                'unit' => array(
+                    'type' => 'VARCHAR',
+                    'constraint' => '120',
+                    'default' => null
+                ),
+                'qty' => array(
+                    'type' => 'INT',
+                    'constraint' => '120',
+                    'default' => 0
+                ),
+                'rate' => array(
+                    'type'       => 'DECIMAL',
+                    'constraint' => '20,2',
+                    'default' =>0.00
+                ),
+                'created_at' => array(
+                    'type' => 'DATETIME',
+                    'null' => TRUE,
+                ),
+                'updated_at' => array(
+                    'type' => 'DATETIME',
+                    'null' => TRUE,
+                )
+            );
+            $this->dbforge->add_field($fields);
+            $this->dbforge->add_key('id', TRUE); // primary key
+            $this->dbforge->create_table($table);
+          
+        }
+    }
 
     public function get_statuses()
     {
@@ -553,17 +605,20 @@ class Tasks_model extends App_Model
         $this->db->insert(db_prefix() . 'tasks', $taskData);
         $insert_id = $this->db->insert_id();
         if(!empty($data['items'])){
+            $this->create_table_task_inventory();
+
             foreach($data['items'] as $itemId => $data){
                 $insertData = [
                     'task_id'=> $insert_id,
                     'inventory_item_id'=>$data['id'],
                     'unit'=> $data['unit'],
                     'qty'=> $data['qty'],
+                    'rate'=> $data['rate'],
                     'created_at' => date('Y-m-d H:i:s')
                 ];
-                $this->db->insert('tbltask_inventories', $insertData);
+                $this->db->insert(db_prefix() .'task_inventories', $insertData);
             }
-        }
+        } 
        
         if ($insert_id) {
            
@@ -892,7 +947,7 @@ class Tasks_model extends App_Model
     public function delete_inventory_item($id)
     {
         $this->db->where('id', $id);
-        $this->db->delete('tbltask_inventories');
+        $this->db->delete(db_prefix() .'task_inventories');
         
         return true;
     }
@@ -901,7 +956,7 @@ class Tasks_model extends App_Model
     {
        
         $this->db->where('id', $id);
-        $this->db->update('tbltask_inventories',[
+        $this->db->update(db_prefix() .'task_inventories',[
             'qty'=>$data['qty']
         ]);
         
@@ -918,9 +973,10 @@ class Tasks_model extends App_Model
                     'inventory_item_id' => $item['id'],
                     'unit'              => $item['unit'],
                     'qty'               => $item['qty'],
+                    'rate'               => $item['rate'],
                     'created_at'        => date('Y-m-d H:i:s')
                 ];
-                $this->db->insert('tbltask_inventories', $insertData);
+                $this->db->insert(db_prefix() .'task_inventories', $insertData);
                 $insertId = $this->db->insert_id();
 
                 $inserted[] = [
@@ -929,6 +985,7 @@ class Tasks_model extends App_Model
                     'qty'        => $item['qty'],
                     'unit'       => $item['unit'],
                     'task_id'    => $item['task_id'],
+                    'rate'    => $item['rate'],
                 ];
             }
         }
