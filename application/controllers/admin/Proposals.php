@@ -651,6 +651,9 @@ class Proposals extends AdminController
         $data['comments'] = $this->proposals_model->get_comments($id);
         $this->load->view('admin/proposals/comments_template', $data);
     } 
+
+    
+
     public function set_final_file()
     {
         $file_id = $this->input->post('file_id');

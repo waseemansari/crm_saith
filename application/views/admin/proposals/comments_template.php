@@ -80,9 +80,9 @@ foreach ($comments as $comment) {
                                         data-file-id="<?= $file['id']; ?>" 
                                         data-proposal-id="<?= $file['proposal_id']; ?>"
                                         <?= $file['is_final'] == 1 ? 'checked' : '' ?>>
-                                    <?= $file['is_final']==1 ? 'Final art work' : 'Mark as final art work'; ?>
+                                    <?= $file['is_final']==1 ? _l('final_art_work') : _l('mark_final_art_work') ?>
                                 </div>
-                           
+                            
                         </div>
                     </div>
               <?php 

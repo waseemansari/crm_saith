@@ -343,7 +343,7 @@ $proposal->content = str_replace('{proposal_items}', $items, $proposal->content)
                                     data-proposal-id="' . $file['proposal_id'] . '" 
                                     ' . ($file['is_final'] == 1 ? 'checked' : '') . ' />
                                     <span class="final-label">
-                                    ' . ($file['is_final'] == 1 ? 'Final art work' : 'Mark as final art work') . '
+                                    ' . ($file['is_final'] == 1 ?_l('final_art_work') : _l('mark_final_art_work')) . '
                                     </span>
                             </div>';
                         }

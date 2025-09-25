@@ -8,7 +8,7 @@ defined('BASEPATH') or exit('No direct script access allowed');
 class Proposals_model extends App_Model
 {
     private $statuses; 
-
+ 
     private $copy = false;
 
     public function __construct()
@@ -590,6 +590,10 @@ class Proposals_model extends App_Model
      * @param  mixed $id proposal id
      * @return array
      */
+
+
+    
+
     public function get_comments($id)
     {
         $this->load->dbforge();

@@ -1,6 +1,10 @@
 <?php defined('BASEPATH') or exit('No direct script access allowed'); ?>
 <?= form_hidden('_attachment_sale_id', $proposal->id); ?>
-<?= form_hidden('_attachment_sale_type', 'proposal'); ?>
+<?= form_hidden('_attachment_sale_type', 'proposal');
+
+
+?>
+
 <div class="panel_s">
     <div class="panel-body">
         <div class="horizontal-scrollable-tabs preview-tabs-top panel-full-width-tabs">
@@ -18,15 +22,22 @@
                         <a href="#tab_comments" onclick="get_proposal_comments(); return false;"
                             aria-controls="tab_comments" role="tab" data-toggle="tab">
                             <?= _l('proposal_comments');
-                        $total_comments = total_rows(
-                            db_prefix() . 'proposal_comments',
-                            [
-                                'proposalid' => $proposal->id,
-                            ]
-                        );
-                        ?>
+                                $total_comments = total_rows(
+                                    db_prefix() . 'proposal_comments',
+                                    [
+                                        'proposalid' => $proposal->id,
+                                    ]
+                                );
+                                ?>
                             <span
                                 class="badge total_comments <?= $total_comments === 0 ? 'hide' : ''; ?>"><?= $total_comments ?></span>
+                        </a>
+                    </li>
+                    <li role="presentation">
+                        <a href="#tab_final_art" onclick="get_proposal_final_art(<?= $proposal->id ?>); return false;"
+                            aria-controls="tab_final_art" role="tab" data-toggle="tab">
+                           
+                            <span class="tab_final_art " <?= _l('final_art_work');?>><?= _l('final_art_work'); ?></span>
                         </a>
                     </li>
                     <li role="presentation">
@@ -455,6 +466,15 @@ if (count($tags) > 0) {
                             </div> 
                         </div>
                     </div>
+                    <div role="tabpanel" class="tab-pane" id="tab_final_art">
+                        <div class="row proposal-comments mtop15">
+                            <div class="col-md-12">
+                                <div id="proposal-comments"></div>
+                                <div class="final_art_work"></div>
+                                  
+                            </div> 
+                        </div>
+                    </div>
                     <div role="tabpanel" class="tab-pane" id="tab_notes">
                         <?= form_open(admin_url('proposals/add_note/' . $proposal->id), ['id' => 'sales-notes', 'class' => 'proposal-notes-form']); ?>
                         <?= render_textarea('description'); ?>
@@ -535,4 +555,22 @@ foreach ($views_activity as $activity) { ?>
     // defined in manage proposals
     proposal_id = '<?= e($proposal->id); ?>';
     init_proposal_editor();
+</script>
+<script>
+function get_proposal_final_art(id) {
+    var baseUrl = "<?= base_url('uploads/proposal_comments/'); ?>";  
+    var fileName = "<?= $this->db->where(['proposal_id'=>$proposal->id,'is_final'=>1])
+                        ->get('tblproposal_comments_file')
+                        ->row()->file ?? ''; ?>";
+    if(fileName !==''){
+      imgUrl = baseUrl + fileName;
+        console.log('final_Art', imgUrl);
+        $('.final_art_work').html('<img src="' + imgUrl + '" style="max-width:200px; height:auto;">');
+    }else{
+        $('.final_art_work').html('Art work not found');
+
+    }
+    
+   
+}
 </script>
