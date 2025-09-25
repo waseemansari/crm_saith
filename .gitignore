@@ -1,0 +1,51 @@
+# Logs and cache
+/application/logs/*
+/application/cache/*
+/application/config/*
+/assets/*
+/cgi-bin/*
+/downloads/*
+/system/*
+/vendor/*
+/db/*
+.idea/*
+/.idea/*
+/documentation/*
+
+composer.json
+composer.lock
+.htaccess
+
+
+# Prevent Git from ignoring these directories themselves
+!/application/logs/index.html
+!/application/cache/index.html
+
+# Uploads directory
+/uploads/*
+
+# Prevent Git from ignoring uploads/index.html
+!/uploads/index.html
+
+# Composer dependencies
+/vendor/
+
+# Node modules
+/node_modules/
+
+# Environment files
+.env
+*.env
+
+# IDE and OS-specific files
+.DS_Store
+Thumbs.db
+*.swp
+*.bak
+*.tmp
+*.orig
+
+# Ignore other files generated during deployment or testing
+*.log
+*.phpunit.result.cache
+*.sass-cache
