@@ -698,8 +698,9 @@ foreach ($task->timesheets as $timesheet) { ?>
             </div>
             
             <div id="task_inventory_items" class="tw-mt-2">
+                <?php $total_material_cost=0; ?>
                 <?php if (!empty($task_inventories)) { 
-                     $total_material_cost=0;
+                     
                     ?>
                     
                     <?php foreach ($task_inventories as $inv) { ?>

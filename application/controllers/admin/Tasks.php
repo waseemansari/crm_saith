@@ -394,23 +394,27 @@ class Tasks extends AdminController
         $this->load->view('admin/tasks/task', $data);
     }
     public function delete_inventory_item($id=''){
-         echo json_encode([
-                    'success' => $this->tasks_model->delete_inventory_item($id),
-                ]);
+        if (staff_can('create',  'checklist_templates')) {
+            echo json_encode([
+                        'success' => $this->tasks_model->delete_inventory_item($id),
+                    ]);
+        }
     }
 
     public function edit_inventory_item($id=''){
-        
-         echo json_encode([
-            'success' => $this->tasks_model->edit_inventory_item($this->input->post(),$id),
-        ]);
+        if (staff_can('create',  'checklist_templates')) {
+            echo json_encode([
+                'success' => $this->tasks_model->edit_inventory_item($this->input->post(),$id),
+            ]);
+       }
     }
 
     public function add_inventory_item($task_id=''){
-       
-         echo json_encode([
-            'success' => $this->tasks_model->add_inventory_item($this->input->post()),
-        ]);
+       if (staff_can('create',  'checklist_templates')) {
+            echo json_encode([
+                'success' => $this->tasks_model->add_inventory_item($this->input->post()),
+            ]);
+        }
     }
     public function copy()
     {

@@ -141,8 +141,6 @@ $(document).ready(function() {
             dataType: "json",
             success: function(response) {
                 $('body').find('.dt-loader').remove();
-                
-              
                 if(response?.success) {
                     if (isFinal === 1) {
                         $('.final-file-checkbox[data-proposal-id="' + proposalId + '"]').not(this).prop('checked', false);
@@ -173,4 +171,4 @@ $(document).ready(function() {
     align-items: center;
     gap: 6px; /* spacing between checkbox and text */
 }
-    </style>
+</style>

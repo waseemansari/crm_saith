@@ -326,22 +326,32 @@ $proposal->content = str_replace('{proposal_items}', $items, $proposal->content)
 
     // ✅ attachments per comment
     if (!empty($files)) {
-       
-        
-            echo '<div class="comment-files">';
-             foreach($files as $file){
-                echo '<a href="' . base_url('uploads/proposal_comments/' . $file['file']) . '" target="_blank">
-                        <i class="fa fa-paperclip"></i> ' . e($file['file']) . '
-                      </a><br>';
+        foreach ($files as $file) {
+            echo '
+                <div class="comment-files">
+                    <div class="file-row">
+                        <a href="' . base_url('uploads/proposal_comments/' . $file['file']) . '" target="_blank">
+                            <i class="fa fa-paperclip"></i> ' . e($file['file']) . '
+                        </a><br>';
+
                         if (!isset($final_proposals[$file['proposal_id']])) {
-                    // echo ' <input type="checkbox" 
-                    //             class="final-file-checkbox" 
-                    //             data-file-id="' . $file['id'] . '" 
-                    //             ' . ($file['is_final'] == 1 ? 'checked' : '') . '> Final File <br>';
-                }
-                      
-            }
-            echo '</div>';
+                            echo '  
+                            <div class="final-file-option">
+                                <input type="checkbox" 
+                                    class="final-file-checkbox" 
+                                    data-file-id="' . $file['id'] . '" 
+                                    data-proposal-id="' . $file['proposal_id'] . '" 
+                                    ' . ($file['is_final'] == 1 ? 'checked' : '') . ' />
+                                    <span class="final-label">
+                                    ' . ($file['is_final'] == 1 ? 'Final art work' : 'Mark as final art work') . '
+                                    </span>
+                            </div>';
+                        }
+
+            echo '</div></div>';
+    }
+
+           
         
     }
 
@@ -408,6 +418,7 @@ $proposal->content = str_replace('{proposal_items}', $items, $proposal->content)
 <script>
 $(document).ready(function() {
     $('.final-file-checkbox').on('change', function() {
+        let $checkbox = $(this);
         var fileId = $(this).data('file-id');
         var isFinal = $(this).is(':checked') ? 1 : 0;
           $("body").append('<div class="dt-loader"></div>');
@@ -419,20 +430,22 @@ $(document).ready(function() {
         formData.append("is_final", isFinal);
         formData.append(csrfName, csrfHash);
         $.ajax({
-            url: admin_url + "proposals/set_final_file",
+             
+            url: "<?= site_url('proposal/set_final_file'); ?>",
+
             type: "POST",
             data: formData,
             processData: false,   // required for files
             contentType: false,   // required for files
             dataType: "json",
             success: function(response) {
-                console.log('response',response.success);
-                
+                $('body').find('.dt-loader').remove();
                 if(response?.success) {
-                    
-                    location.reload(); // optional: reload to hide other checkboxes if needed
+                           location.reload();
+
                 } else {
                     alert('Failed to update status.');
+                    $checkbox.prop('checked', !isFinal);
                 }
             },
             error: function() {
@@ -442,3 +455,18 @@ $(document).ready(function() {
     });
 });
 </script>
+
+
+<style>
+    .file-row {
+    display: flex;
+    justify-content: space-between; /* link on left, checkbox+text on right */
+    align-items: center;
+}
+
+.final-file-option {
+    display: flex;
+    align-items: center;
+    gap: 6px; /* spacing between checkbox and text */
+}
+</style>
